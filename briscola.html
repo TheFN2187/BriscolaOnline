@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Briscola - Animated Edition</title>
+    <style>
+        /* The Table */
+        body {
+            background: radial-gradient(circle at center, #2E7D32 0%, #1B5E20 60%, #0A3D11 100%);
+            box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* HUD & Controls */
+        .hud {
+            width: 100%;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            padding: 15px 0 30px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        select, button {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 15px;
+            font-size: 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s;
+        }
+        
+        select:hover, button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        select option { background: #1B5E20; color: white; }
+
+        .score-badge {
+            background: rgba(0,0,0,0.6);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border: 1px solid rgba(255,215,0,0.3);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .board-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Card Styling */
+        .hand {
+            display: flex;
+            justify-content: center;
+            gap: -20px;
+            min-height: 174px; /* Matched to card height */
+        }
+        
+        .card {
+            width: 96px;
+            height: 174px;
+            background: transparent; 
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            box-shadow: -2px 5px 15px rgba(0,0,0,0.4);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s;
+            user-select: none;
+            margin: 0 5px;
+            overflow: hidden; 
+        }
+
+        .card:hover {
+            transform: translateY(-15px) scale(1.05);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.6);
+            z-index: 10;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; 
+            display: block;
+            pointer-events: none; 
+            border-radius: 8px;
+            transform: scale(1.04); 
+        }
+
+        .card.back {
+            background: 
+                repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.15) 5px, rgba(255,255,255,0.15) 10px),
+                repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(255,255,255,0.15) 5px, rgba(255,255,255,0.15) 10px),
+                #b71c1c;
+            border: 4px solid #fdfbf7;
+            box-sizing: border-box;
+            cursor: default;
+        }
+        
+        .card.back:hover {
+            transform: none;
+            box-shadow: -2px 5px 15px rgba(0,0,0,0.4);
+        }
+
+        /* Middle Play Area */
+        .middle-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 250px;
+            width: 100%; /* Ensure it spans full width */
+        }
+        
+        /* Force all 3 columns to be exactly the same width so center never shifts */
+        .middle-area > div {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 33.33%;
+        }
+        .deck-area {
+            position: relative;
+            width: 190px;
+            height: 180px;
+        }
+
+        #briscola-card {
+            position: absolute;
+            left: 50px;
+            top: 30px;
+            transform: rotate(90deg);
+            z-index: 0;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+        }
+        
+        #briscola-card:hover { transform: rotate(90deg); }
+
+        #deck-stack {
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .deck-counter-badge {
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            background: #e74c3c;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 5px 8px;
+            border-radius: 50%;
+            border: 2px solid white;
+            z-index: 2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .table-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 320px;
+            height: 230px;
+            border-radius: 100px;
+            background: rgba(0,0,0,0.15);
+            border: 2px dashed rgba(255, 215, 0, 0.2);
+            position: relative;
+        }
+        
+        .table-area .card {
+            position: absolute;
+        }
+        
+        .table-area .card:hover { transform: none !important; cursor: default; }
+
+        .status-board {
+            font-size: 1.2em;
+            margin-top: 10px;
+            padding: 10px 30px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 30px;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+<div class="hud">
+    <div class="score-badge">AI: <span id="ai-score">0</span></div>
+    
+    <div>
+        <label for="difficulty-select" style="margin-right: 10px;">AI Level:</label>
+        <select id="difficulty-select" onchange="changeDifficulty()">
+            <option value="easy">Easy (Random)</option>
+            <option value="medium">Medium (Heuristic)</option>
+            <option value="hard">Hard (Strategic)</option>
+        </select>
+        <button onclick="resetGame()" style="margin-left: 10px;">Deal New Game</button>
+    </div>
+
+    <div class="score-badge" style="color: #ffd700;">YOU: <span id="player-score">0</span></div>
+</div>
+
+<div class="board-container">
+    <div class="hand" id="ai-hand"></div>
+
+    <div class="middle-area">
+    
+    <div>
+        <div class="deck-area">
+            <div id="briscola-card" class="card"></div>
+            <div id="deck-stack-container" style="position: relative;">
+                <div id="deck-stack" class="card back"></div>
+                <div id="deck-count-badge" class="deck-counter-badge"></div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="table-area" id="table"></div>
+        <div class="status-board" id="status" style="max-width: 280px; white-space: normal; text-align: center;">Starting game...</div>
+    </div>
+
+    <div>
+        </div>
+
+</div>
+
+    <div class="hand" id="player-hand"></div>
+</div>
+
+<script>
+    const suits = ['Coins', 'Cups', 'Swords', 'Clubs'];
+    const ranks = [
+        { name: 'Ace', val: 11, power: 10 },
+        { name: '3', val: 10, power: 9 },
+        { name: 'King', val: 4, power: 8 },
+        { name: 'Knight', val: 3, power: 7 },
+        { name: 'Jack', val: 2, power: 6 },
+        { name: '7', val: 0, power: 5 },
+        { name: '6', val: 0, power: 4 },
+        { name: '5', val: 0, power: 3 },
+        { name: '4', val: 0, power: 2 },
+        { name: '2', val: 0, power: 1 }
+    ];
+
+    let deck = [], playerHand = [], aiHand = [], table = [];
+    let playerScore = 0, aiScore = 0;
+    let briscolaCard = null, briscolaSuit = '';
+    let playerTurn = true; 
+    let playerCanPlay = true; 
+    let gameOver = false;
+    let aiDifficulty = 'easy';
+
+    function changeDifficulty() { aiDifficulty = document.getElementById('difficulty-select').value; }
+
+    function resetGame() {
+        playerHand = []; aiHand = []; table = [];
+        playerScore = 0; aiScore = 0;
+        playerTurn = true; playerCanPlay = true; gameOver = false;
+        initGame();
+    }
+
+    function initGame() {
+        deck = [];
+        suits.forEach(suit => {
+            ranks.forEach(rank => {
+                deck.push({ suit: suit, name: rank.name, val: rank.val, power: rank.power });
+            });
+        });
+        
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+
+        for (let i = 0; i < 3; i++) {
+            playerHand.push(deck.pop());
+            aiHand.push(deck.pop());
+        }
+
+        briscolaCard = deck.pop();
+        briscolaSuit = briscolaCard.suit;
+        
+        changeDifficulty();
+        render();
+        updateStatus("Your turn to lead!", "#4cd137");
+    }
+
+    function updateStatus(text, color = "white") {
+        const statusEl = document.getElementById('status');
+        statusEl.innerText = text;
+        statusEl.style.color = color;
+    }
+
+    // --- ANIMATION CONTROLLERS ---
+
+    function animateCardPlay(index, isPlayer, cardData, isFirstCard, targetRotation, callback) {
+        // Find the specific card element in the DOM
+        const handDiv = isPlayer ? document.getElementById('player-hand') : document.getElementById('ai-hand');
+        const sourceEl = handDiv.children[index];
+        const startRect = sourceEl.getBoundingClientRect();
+
+        // Create a ghost clone that will fly across the screen
+        const clone = document.createElement('div');
+        clone.className = 'card';
+        // Give it the face image (this causes AI cards to magically flip as they are tossed!)
+        clone.innerHTML = renderCardHTML(cardData);
+
+        // Lock its starting position to exactly where the card is in the hand
+        clone.style.position = 'fixed';
+        clone.style.top = startRect.top + 'px';
+        clone.style.left = startRect.left + 'px';
+        clone.style.zIndex = '9999';
+        clone.style.margin = '0';
+        clone.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+        // Turn the original invisible so it looks like it popped out of the hand
+        sourceEl.style.opacity = '0';
+
+        document.body.appendChild(clone);
+
+        // Calculate where the center of the table is
+        const tableDiv = document.getElementById('table');
+        const tableRect = tableDiv.getBoundingClientRect();
+
+        // Math to calculate final resting coordinates
+        let offsetX = isPlayer ? -15 : 15;
+        let shift = isFirstCard ? -25 : 25;
+        let yOffset = isPlayer ? 10 : -10;
+
+        // 48 and 87 are half the width/height of the card to keep it centered
+        let targetLeft = tableRect.left + (tableRect.width / 2) - 48 + shift + offsetX; 
+        let targetTop = tableRect.top + (tableRect.height / 2) - 87 + yOffset; 
+
+        // Force the browser to register the starting position before we apply the transform
+        clone.offsetHeight;
+
+        // Send the ghost flying!
+        clone.style.top = targetTop + 'px';
+        clone.style.left = targetLeft + 'px';
+        clone.style.transform = `rotate(${targetRotation}deg) scale(1.1)`; // Slight scale to pop it towards camera
+        
+        // Wait for the animation to finish (400ms), then delete the ghost and update real game state
+        setTimeout(() => {
+            clone.remove();
+            callback();
+        }, 400);
+    }
+
+    function animateTrickClear(isPlayerWinner, callback) {
+        const tableCards = document.querySelectorAll('#table .card');
+
+        // Make the cards sweep up or down off the screen
+        tableCards.forEach(card => {
+            card.style.transition = 'all 0.5s ease-in';
+            if (isPlayerWinner) {
+                card.style.transform += ' translate(0, 500px)'; // Sweep down to player
+                card.style.opacity = '0';
+            } else {
+                card.style.transform += ' translate(0, -500px)'; // Sweep up to AI
+                card.style.opacity = '0';
+            }
+        });
+
+        // Wait half a second before resetting the table
+        setTimeout(() => {
+            callback();
+        }, 500);
+    }
+
+    // --- REWRITTEN PLAY/RESOLVE LOGIC ---
+
+    function playCard(index, isPlayer) {
+        // Prevent rapid double-clicking during animations
+        if (gameOver || (isPlayer && !playerCanPlay)) return;
+        if (isPlayer) playerCanPlay = false; 
+
+        let card = isPlayer ? playerHand[index] : aiHand[index];
+        let isFirstCard = table.length === 0;
+        let randomRotation = Math.floor(Math.random() * 40) - 20; 
+        
+        // Trigger the visual Toss animation FIRST
+        animateCardPlay(index, isPlayer, card, isFirstCard, randomRotation, () => {
+            
+            // Once animation finishes, update the math engine
+            if (isPlayer) {
+                playerHand.splice(index, 1);
+            } else {
+                aiHand.splice(index, 1);
+            }
+            
+            table.push({ card: card, isPlayer: isPlayer, rotation: randomRotation });
+            render();
+
+            // Proceed with rules logic
+            if (table.length === 2) {
+                setTimeout(resolveTrick, 1200); // Wait a second so player can see what was played
+            } else {
+                if (isPlayer) {
+                    updateStatus("AI is thinking...", "#fbc531");
+                    setTimeout(aiPlayCalculations, 800); 
+                } else {
+                    playerCanPlay = true; 
+                    updateStatus("Your turn to follow.", "#4cd137");
+                }
+            }
+        });
+    }
+
+    function resolveTrick() {
+        let lead = table[0];
+        let follow = table[1];
+        
+        let winnerType = getWinner(lead.card, follow.card);
+        let trickWinnerIsPlayer = (winnerType === 'lead') ? lead.isPlayer : follow.isPlayer;
+        let points = lead.card.val + follow.card.val;
+        
+        // Trigger the visual Sweep animation FIRST
+        animateTrickClear(trickWinnerIsPlayer, () => {
+            
+            // Once cards are swept off screen, update the math engine
+            if (trickWinnerIsPlayer) {
+                playerScore += points;
+                playerTurn = true;
+                playerCanPlay = true;
+            } else {
+                aiScore += points;
+                playerTurn = false;
+            }
+            
+            table = [];
+            drawCards();
+            render();
+
+            if (playerHand.length === 0 && aiHand.length === 0) {
+                endGame();
+            } else {
+                if (!playerTurn) {
+                    updateStatus("AI took the trick. Thinking...", "#e84118");
+                    setTimeout(aiPlayCalculations, 1000); 
+                } else {
+                    updateStatus("You took the trick! Your lead.", "#4cd137");
+                }
+            }
+        });
+    }
+
+    // --- AI Engines ---
+    function aiPlayCalculations() {
+        if (gameOver) return;
+        let chosenIndex = 0;
+        
+        if (aiDifficulty === 'easy') chosenIndex = Math.floor(Math.random() * aiHand.length);
+        else if (aiDifficulty === 'medium') chosenIndex = getMediumAiChoice();
+        else if (aiDifficulty === 'hard') chosenIndex = getHardAiChoice();
+        
+        playCard(chosenIndex, false);
+    }
+
+    function getWinner(leadCard, followCard) {
+        if (followCard.suit === briscolaSuit && leadCard.suit !== briscolaSuit) return 'follow';
+        if (leadCard.suit === briscolaSuit && followCard.suit !== briscolaSuit) return 'lead';
+        if (leadCard.suit === followCard.suit) return leadCard.power > followCard.power ? 'lead' : 'follow';
+        return 'lead';
+    }
+
+    function getMediumAiChoice() {
+        if (table.length === 0) {
+            let bestIndex = 0, lowestValue = Infinity;
+            aiHand.forEach((card, index) => {
+                let weight = card.val;
+                if (card.suit === briscolaSuit) weight += 20; 
+                if (weight < lowestValue) { lowestValue = weight; bestIndex = index; }
+            });
+            return bestIndex;
+        } else {
+            let playerCard = table[0].card;
+            let winningCards = [], losingCards = [];
+            aiHand.forEach((card, index) => {
+                if (getWinner(playerCard, card) === 'follow') winningCards.push({ card, index });
+                else losingCards.push({ card, index });
+            });
+            if (winningCards.length > 0 && (playerCard.val > 0 || winningCards.some(w => w.card.val > 0))) {
+                winningCards.sort((a, b) => a.card.power - b.card.power);
+                return winningCards[0].index;
+            }
+            aiHand.forEach((card, index) => losingCards.push({card, index}));
+            losingCards.sort((a,b) => (a.card.val + (a.card.suit === briscolaSuit ? 20 : 0)) - (b.card.val + (b.card.suit === briscolaSuit ? 20 : 0)));
+            return losingCards[0].index;
+        }
+    }
+
+    function getHardAiChoice() {
+        if (table.length === 0) {
+            let nonBriscolas = aiHand.map((c, i) => ({c, i})).filter(item => item.c.suit !== briscolaSuit);
+            if (nonBriscolas.length > 0) {
+                nonBriscolas.sort((a, b) => a.c.val - b.c.val || a.c.power - b.c.power);
+                return nonBriscolas[0].i;
+            }
+            aiHand.sort((a,b) => a.power - b.power);
+            return 0; 
+        } else {
+            let playerCard = table[0].card;
+            let totalPointsOnTable = playerCard.val;
+            let choices = aiHand.map((card, index) => {
+                let wins = getWinner(playerCard, card) === 'follow';
+                return { card, index, wins, potentialPoints: totalPointsOnTable + card.val };
+            });
+            let winningChoices = choices.filter(c => c.wins);
+
+            if (winningChoices.length > 0) {
+                if (playerCard.val >= 10) {
+                    let briscolaWins = winningChoices.filter(c => c.card.suit === briscolaSuit);
+                    if (briscolaWins.length > 0) {
+                        briscolaWins.sort((a, b) => a.card.power - b.card.power);
+                        return briscolaWins[0].index; 
+                    }
+                }
+                winningChoices.sort((a, b) => b.potentialPoints - a.potentialPoints);
+                if (winningChoices[0].potentialPoints >= 4 || winningChoices[0].card.suit !== briscolaSuit) return winningChoices[0].index;
+            }
+            let losingChoices = choices.filter(c => !c.wins);
+            if (losingChoices.length === 0) losingChoices = choices; 
+            losingChoices.sort((a, b) => {
+                let scoreA = a.card.val + (a.card.suit === briscolaSuit ? 50 : 0);
+                let scoreB = b.card.val + (b.card.suit === briscolaSuit ? 50 : 0);
+                return scoreA - scoreB;
+            });
+            return losingChoices[0].index;
+        }
+    }
+
+    function drawCards() {
+        if (deck.length > 0 || briscolaCard) {
+            let drawForWinner = deck.length > 0 ? deck.pop() : briscolaCard;
+            if (deck.length === 0 && drawForWinner === briscolaCard) briscolaCard = null;
+            
+            let drawForLoser = deck.length > 0 ? deck.pop() : briscolaCard;
+            if (deck.length === 0 && drawForLoser === briscolaCard && briscolaCard !== null) briscolaCard = null;
+
+            if (playerTurn) {
+                if (drawForWinner) playerHand.push(drawForWinner);
+                if (drawForLoser) aiHand.push(drawForLoser);
+            } else {
+                if (drawForWinner) aiHand.push(drawForWinner);
+                if (drawForLoser) playerHand.push(drawForLoser);
+            }
+        }
+    }
+
+    function endGame() {
+        gameOver = true;
+        let msg = playerScore > aiScore ? "YOU WIN!" : (playerScore < aiScore ? "AI WINS!" : "IT'S A TIE!");
+        let color = playerScore > aiScore ? "#4cd137" : (playerScore < aiScore ? "#e84118" : "#fbc531");
+        updateStatus(`GAME OVER! ${msg}`, color);
+    }
+
+    // --- RENDER ENGINE ---
+    function getCardImagePath(card) {
+        let suitName = card.suit.toLowerCase();
+        let rankName = card.name.toLowerCase();
+        return `images/${suitName}_${rankName}.png`;
+    }
+
+    function renderCardHTML(card) {
+        let imagePath = getCardImagePath(card);
+        return `<img src="${imagePath}" alt="${card.name} of ${card.suit}" onerror="this.outerHTML='<div class=\\'image-fallback\\'>Missing<br>${card.name}<br>${card.suit}</div>'">`;
+    }
+
+    function renderCardBackHTML() { return ``; }
+
+    function render() {
+        const aiHandDiv = document.getElementById('ai-hand');
+        aiHandDiv.innerHTML = '';
+        aiHand.forEach(() => {
+            let div = document.createElement('div');
+            div.className = 'card back';
+            div.innerHTML = renderCardBackHTML();
+            aiHandDiv.appendChild(div);
+        });
+
+        const playerHandDiv = document.getElementById('player-hand');
+        playerHandDiv.innerHTML = '';
+        playerHand.forEach((card, index) => {
+            let div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = renderCardHTML(card);
+            div.onclick = () => playCard(index, true);
+            playerHandDiv.appendChild(div);
+        });
+
+        const tableDiv = document.getElementById('table');
+        tableDiv.innerHTML = '';
+        table.forEach((item, index) => {
+            let div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = renderCardHTML(item.card);
+            let offsetX = item.isPlayer ? -15 : 15;
+            let shift = index === 0 ? -25 : 25; 
+            div.style.transform = `translate(${shift + offsetX}px, ${item.isPlayer ? 10 : -10}px) rotate(${item.rotation}deg)`;
+            tableDiv.appendChild(div);
+        });
+
+        const bCardDiv = document.getElementById('briscola-card');
+        if (briscolaCard) {
+            bCardDiv.style.display = 'block';
+            bCardDiv.innerHTML = renderCardHTML(briscolaCard);
+        } else {
+            bCardDiv.style.display = 'none';
+        }
+        
+        const deckStackDiv = document.getElementById('deck-stack');
+        const deckBadge = document.getElementById('deck-count-badge');
+        
+        if (deck.length > 0) {
+            deckStackDiv.style.display = 'flex';
+            deckStackDiv.innerHTML = renderCardBackHTML();
+            deckBadge.style.display = 'block';
+            deckBadge.innerText = deck.length;
+        } else {
+            deckStackDiv.style.display = 'none';
+            deckBadge.style.display = 'none';
+        }
+
+        document.getElementById('player-score').innerText = playerScore;
+        document.getElementById('ai-score').innerText = aiScore;
+    }
+
+    initGame();
+</script>
+</body>
+</html>
