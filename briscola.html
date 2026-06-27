@@ -29,7 +29,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 30px;
+            gap: 20px;
         }
         
         select, button {
@@ -110,6 +110,61 @@
             transform: scale(1.04); 
         }
 
+        /* --- PURE CSS EMOJI CARDS --- */
+        .emoji-style {
+            width: 100%;
+            height: 100%;
+            background: #fdfbf7;
+            border: 4px solid #fff;
+            border-radius: 8px;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Georgia', serif;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .emoji-style .corner {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 6px;
+            line-height: 1.1;
+        }
+        
+        .emoji-style .corner.top-left { top: 0; left: 0; }
+        .emoji-style .corner.bottom-right { bottom: 0; right: 0; transform: rotate(180deg); }
+        
+        .emoji-style .center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .emoji-style .center .main-rank {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: -5px;
+            text-shadow: none;
+        }
+
+        .emoji-style.coins { color: #d35400; }
+        .emoji-style.cups { color: #c0392b; }
+        .emoji-style.swords { color: #2980b9; }
+        .emoji-style.clubs { color: #27ae60; }
+
+        /* Card Back */
         .card.back {
             background: 
                 repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.15) 5px, rgba(255,255,255,0.15) 10px),
@@ -131,10 +186,9 @@
             justify-content: space-between;
             align-items: center;
             height: 250px;
-            width: 100%; /* Ensure it spans full width */
+            width: 100%; 
         }
         
-        /* Force all 3 columns to be exactly the same width so center never shifts */
         .middle-area > div {
             flex: 1; 
             display: flex;
@@ -223,13 +277,19 @@
     <div class="score-badge">AI: <span id="ai-score">0</span></div>
     
     <div>
-        <label for="difficulty-select" style="margin-right: 10px;">AI Level:</label>
+        <label for="card-style-select" style="margin-right: 5px;">Style:</label>
+        <select id="card-style-select" onchange="changeCardStyle()">
+            <option value="images">Images</option>
+            <option value="emojis">Emojis</option>
+        </select>
+        
+        <label for="difficulty-select" style="margin-left: 15px; margin-right: 5px;">AI Level:</label>
         <select id="difficulty-select" onchange="changeDifficulty()">
             <option value="easy">Easy (Random)</option>
             <option value="medium">Medium (Heuristic)</option>
             <option value="hard">Hard (Strategic)</option>
         </select>
-        <button onclick="resetGame()" style="margin-left: 10px;">Deal New Game</button>
+        <button onclick="resetGame()" style="margin-left: 15px;">Deal New Game</button>
     </div>
 
     <div class="score-badge" style="color: #ffd700;">YOU: <span id="player-score">0</span></div>
@@ -285,8 +345,14 @@
     let playerCanPlay = true; 
     let gameOver = false;
     let aiDifficulty = 'easy';
+    let useEmojiCards = false;
 
     function changeDifficulty() { aiDifficulty = document.getElementById('difficulty-select').value; }
+    
+    function changeCardStyle() { 
+        useEmojiCards = document.getElementById('card-style-select').value === 'emojis';
+        render(); 
+    }
 
     function resetGame() {
         playerHand = []; aiHand = []; table = [];
@@ -317,6 +383,7 @@
         briscolaSuit = briscolaCard.suit;
         
         changeDifficulty();
+        changeCardStyle();
         render();
         updateStatus("Your turn to lead!", "#4cd137");
     }
@@ -330,18 +397,14 @@
     // --- ANIMATION CONTROLLERS ---
 
     function animateCardPlay(index, isPlayer, cardData, isFirstCard, targetRotation, callback) {
-        // Find the specific card element in the DOM
         const handDiv = isPlayer ? document.getElementById('player-hand') : document.getElementById('ai-hand');
         const sourceEl = handDiv.children[index];
         const startRect = sourceEl.getBoundingClientRect();
 
-        // Create a ghost clone that will fly across the screen
         const clone = document.createElement('div');
         clone.className = 'card';
-        // Give it the face image (this causes AI cards to magically flip as they are tossed!)
         clone.innerHTML = renderCardHTML(cardData);
 
-        // Lock its starting position to exactly where the card is in the hand
         clone.style.position = 'fixed';
         clone.style.top = startRect.top + 'px';
         clone.style.left = startRect.left + 'px';
@@ -349,33 +412,26 @@
         clone.style.margin = '0';
         clone.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
-        // Turn the original invisible so it looks like it popped out of the hand
         sourceEl.style.opacity = '0';
 
         document.body.appendChild(clone);
 
-        // Calculate where the center of the table is
         const tableDiv = document.getElementById('table');
         const tableRect = tableDiv.getBoundingClientRect();
 
-        // Math to calculate final resting coordinates
         let offsetX = isPlayer ? -15 : 15;
         let shift = isFirstCard ? -25 : 25;
         let yOffset = isPlayer ? 10 : -10;
 
-        // 48 and 87 are half the width/height of the card to keep it centered
         let targetLeft = tableRect.left + (tableRect.width / 2) - 48 + shift + offsetX; 
         let targetTop = tableRect.top + (tableRect.height / 2) - 87 + yOffset; 
 
-        // Force the browser to register the starting position before we apply the transform
         clone.offsetHeight;
 
-        // Send the ghost flying!
         clone.style.top = targetTop + 'px';
         clone.style.left = targetLeft + 'px';
-        clone.style.transform = `rotate(${targetRotation}deg) scale(1.1)`; // Slight scale to pop it towards camera
+        clone.style.transform = `rotate(${targetRotation}deg) scale(1.1)`; 
         
-        // Wait for the animation to finish (400ms), then delete the ghost and update real game state
         setTimeout(() => {
             clone.remove();
             callback();
@@ -385,28 +441,25 @@
     function animateTrickClear(isPlayerWinner, callback) {
         const tableCards = document.querySelectorAll('#table .card');
 
-        // Make the cards sweep up or down off the screen
         tableCards.forEach(card => {
             card.style.transition = 'all 0.5s ease-in';
             if (isPlayerWinner) {
-                card.style.transform += ' translate(0, 500px)'; // Sweep down to player
+                card.style.transform += ' translate(0, 500px)'; 
                 card.style.opacity = '0';
             } else {
-                card.style.transform += ' translate(0, -500px)'; // Sweep up to AI
+                card.style.transform += ' translate(0, -500px)'; 
                 card.style.opacity = '0';
             }
         });
 
-        // Wait half a second before resetting the table
         setTimeout(() => {
             callback();
         }, 500);
     }
 
-    // --- REWRITTEN PLAY/RESOLVE LOGIC ---
+    // --- PLAY/RESOLVE LOGIC ---
 
     function playCard(index, isPlayer) {
-        // Prevent rapid double-clicking during animations
         if (gameOver || (isPlayer && !playerCanPlay)) return;
         if (isPlayer) playerCanPlay = false; 
 
@@ -414,10 +467,8 @@
         let isFirstCard = table.length === 0;
         let randomRotation = Math.floor(Math.random() * 40) - 20; 
         
-        // Trigger the visual Toss animation FIRST
         animateCardPlay(index, isPlayer, card, isFirstCard, randomRotation, () => {
             
-            // Once animation finishes, update the math engine
             if (isPlayer) {
                 playerHand.splice(index, 1);
             } else {
@@ -427,9 +478,8 @@
             table.push({ card: card, isPlayer: isPlayer, rotation: randomRotation });
             render();
 
-            // Proceed with rules logic
             if (table.length === 2) {
-                setTimeout(resolveTrick, 1200); // Wait a second so player can see what was played
+                setTimeout(resolveTrick, 1200); 
             } else {
                 if (isPlayer) {
                     updateStatus("AI is thinking...", "#fbc531");
@@ -450,10 +500,8 @@
         let trickWinnerIsPlayer = (winnerType === 'lead') ? lead.isPlayer : follow.isPlayer;
         let points = lead.card.val + follow.card.val;
         
-        // Trigger the visual Sweep animation FIRST
         animateTrickClear(trickWinnerIsPlayer, () => {
             
-            // Once cards are swept off screen, update the math engine
             if (trickWinnerIsPlayer) {
                 playerScore += points;
                 playerTurn = true;
@@ -598,8 +646,38 @@
     }
 
     function renderCardHTML(card) {
-        let imagePath = getCardImagePath(card);
-        return `<img src="${imagePath}" alt="${card.name} of ${card.suit}" onerror="this.outerHTML='<div class=\\'image-fallback\\'>Missing<br>${card.name}<br>${card.suit}</div>'">`;
+        if (useEmojiCards) {
+            let suitEmoji = '';
+            let suitClass = card.suit.toLowerCase();
+            if (card.suit === 'Coins') suitEmoji = '🪙';
+            else if (card.suit === 'Cups') suitEmoji = '🍷';
+            else if (card.suit === 'Swords') suitEmoji = '⚔️';
+            else if (card.suit === 'Clubs') suitEmoji = '🏏';
+
+            // Custom Rank Mapping for pure numbers + Ace
+            let shortRank = card.name;
+            if (card.name === 'Ace') shortRank = 'A';
+            else if (card.name === 'Jack') shortRank = '11';
+            else if (card.name === 'Knight') shortRank = '12';
+            else if (card.name === 'King') shortRank = '13';
+
+            return `
+            <div class="emoji-style ${suitClass}">
+                <div class="corner top-left">
+                    <span class="rank">${shortRank}</span>
+                </div>
+                <div class="center">
+                    <span class="main-emoji">${suitEmoji}</span>
+                    <span class="main-rank">${shortRank}</span>
+                </div>
+                <div class="corner bottom-right">
+                    <span class="rank">${shortRank}</span>
+                </div>
+            </div>`;
+        } else {
+            let imagePath = getCardImagePath(card);
+            return `<img src="${imagePath}" alt="${card.name} of ${card.suit}" onerror="this.outerHTML='<div class=\\'image-fallback\\'>Missing<br>${card.name}<br>${card.suit}</div>'">`;
+        }
     }
 
     function renderCardBackHTML() { return ``; }
