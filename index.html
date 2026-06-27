@@ -269,6 +269,55 @@
             letter-spacing: 2px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 768px) {
+            /* Wrap the top HUD items */
+            .hud {
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 10px;
+            }
+
+            /* Shrink the cards slightly */
+            .card {
+                width: 70px;
+                height: 127px;
+                margin: 0 3px;
+            }
+            .hand {
+                min-height: 127px;
+            }
+
+            /* Fix the middle area overlap */
+           .middle-area {
+                height: auto; /* Allows status text to push down naturally */
+                min-height: 220px;
+                margin: 15px 0;
+            }
+
+            /* Shrink the visual table bounding box */
+            .table-area {
+                width: 220px;
+                height: 180px;
+            }
+
+            /* Scale down the deck and briscola card */
+            .deck-area {
+                transform: scale(0.7);
+                transform-origin: center left;
+                margin-left: 10px;
+            }
+
+            /* Ensure status board doesn't get blocked */
+            .status-board {
+                font-size: 0.9em;
+                padding: 8px 15px;
+                margin-top: 15px;
+                position: relative;
+                z-index: 10;
+            }
+        }
     </style>
 </head>
 <body>
@@ -423,8 +472,12 @@
         let shift = isFirstCard ? -25 : 25;
         let yOffset = isPlayer ? 10 : -10;
 
-        let targetLeft = tableRect.left + (tableRect.width / 2) - 48 + shift + offsetX; 
-        let targetTop = tableRect.top + (tableRect.height / 2) - 87 + yOffset; 
+        // Dynamically calculate the card's dimensions so animations stay centered on mobile
+        let cardHalfWidth = sourceEl.offsetWidth / 2;
+        let cardHalfHeight = sourceEl.offsetHeight / 2;
+
+        let targetLeft = tableRect.left + (tableRect.width / 2) - cardHalfWidth + shift + offsetX; 
+        let targetTop = tableRect.top + (tableRect.height / 2) - cardHalfHeight + yOffset;
 
         clone.offsetHeight;
 
