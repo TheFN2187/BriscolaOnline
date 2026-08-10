@@ -1,6 +1,6 @@
 # Web-Based Briscola 🃏
 
-A fully playable, interactive web-based version of the classic Italian card game **Briscola**. Built entirely with vanilla HTML, CSS, and JavaScript, this project requires no external libraries, frameworks, or backend servers. 
+A fully playable, interactive web-based version of the classic Italian card game **Briscola**. Built entirely with vanilla HTML, CSS, and JavaScript, this project requires no external libraries, frameworks, or backend servers. Core functions of the gane are all contained in one HTML file. 
 
 It features an intelligent rule-based AI with three difficulty levels, smooth CSS animations for card tossing and trick clearing, and dynamic visual state management.
 
@@ -13,6 +13,7 @@ It features an intelligent rule-based AI with three difficulty levels, smooth CS
 * **Polished UI/UX:** Features a gradient baize table, responsive layout, and smooth CSS keyframe animations to simulate the physical feeling of tossing cards onto a table and sweeping up won tricks.
 
 ## Setup & Installation
+To play Briscola immediately via a web browser, click [here](https://thefn2187.github.io/BriscolaOnline/). The project is hosted on Github Pages.
 
 Because this game relies entirely on client-side rendering, you do not need a server to run it.
 
@@ -20,7 +21,7 @@ Because this game relies entirely on client-side rendering, you do not need a se
 2. Ensure your directory structure looks like this:
    ```text
    /BriscolaGame
-   ├── briscola.html
+   ├── index.html
    └── /images
        ├── coins_ace.png
        ├── coins_2.png
@@ -54,6 +55,6 @@ Because this game relies entirely on client-side rendering, you do not need a se
 The card face imagery used in this project is based on the Triestine (Tršćanske) regional pattern.
 
 **Image Source & Licensing:**
-The card assets are attributed to user CCCKKK and are licensed under CC BY-SA 4.0, via Wikimedia Commons.
+The card assets are attributed to user CCCKKK and are licensed under [CC](https://en.wikipedia.org/wiki/en:Creative_Commons) [BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.en), via [Wikimedia Commons](https://commons.wikimedia.org/wiki/Main_Page).
 
 Note: The physical card backs are generated procedurally using CSS repeating linear gradients, mitigating the need for an external image file.
