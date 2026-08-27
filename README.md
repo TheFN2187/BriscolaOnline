@@ -11,6 +11,7 @@ It features an intelligent rule-based AI with three difficulty levels, smooth CS
   * *Medium:* A heuristic AI that avoids throwing away high-value cards and uses trumps defensively.
   * *Hard:* A strategic AI that bleeds the player's hand, protects high-power trumps, and actively tries to steal the player's high-value cards (Aces and 3s).
 * **Polished UI/UX:** Features a gradient baize table, responsive layout, and smooth CSS keyframe animations to simulate the physical feeling of tossing cards onto a table and sweeping up won tricks.
+* **Win/Loss Statistic Tracking:** Tracks number of games played, games won, games lost, and calculates the Win/Loss ratio.
 
 ## Setup & Installation
 To play Briscola immediately via a web browser, click [here](https://thefn2187.github.io/BriscolaOnline/). The project is hosted on Github Pages.
