@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Briscola - Animated Edition</title>
     <style>
+        /* Responsive sizing tokens.
+           Card widths are bound by BOTH viewport width and viewport height
+           (via min(vw, vh)) so cards scale down correctly in short/landscape
+           viewports, not just narrow/portrait ones. Player cards get the
+           largest share since those are the only cards the person must tap. */
+        :root {
+            --player-card-w: clamp(76px, min(24vw, 30vh), 96px);
+            --ai-card-w: clamp(46px, min(13vw, 17vh), 96px);
+            --table-card-w: clamp(52px, min(15vw, 19vh), 96px);
+            --card-ratio: 1.8125; /* 174 / 96 from the original fixed card size */
+        }
+
+        * { box-sizing: border-box; }
+
         /* The Table */
         body {
             background: radial-gradient(circle at center, #2E7D32 0%, #1B5E20 60%, #0A3D11 100%);
@@ -15,29 +29,51 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            overflow: hidden;
+            /* Safety net only: layout is sized to fit one screen, but if a
+               device is unusually short we scroll instead of silently
+               clipping game content (the original clipped the player's
+               own hand off-screen with no way to reach it). */
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         /* HUD & Controls */
         .hud {
             width: 100%;
             background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
-            padding: 15px 0 30px 0;
+            padding: clamp(8px, 2vh, 15px) 8px clamp(10px, 3vh, 30px) 8px;
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 20px;
+            gap: clamp(6px, 2vw, 20px);
+        }
+
+        .hud-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: clamp(6px, 1.5vw, 15px);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
         }
         
         select, button {
             background: rgba(255, 255, 255, 0.1);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 8px 15px;
-            font-size: 14px;
+            padding: clamp(6px, 1vh, 8px) clamp(10px, 2vw, 15px);
+            font-size: clamp(12px, 3vw, 14px);
             border-radius: 20px;
             cursor: pointer;
             backdrop-filter: blur(5px);
@@ -53,22 +89,26 @@
 
         .score-badge {
             background: rgba(0,0,0,0.6);
-            padding: 8px 20px;
+            padding: clamp(6px, 1.2vh, 8px) clamp(12px, 3vw, 20px);
             border-radius: 20px;
             font-weight: bold;
+            font-size: clamp(13px, 3.2vw, 16px);
             letter-spacing: 1px;
             border: 1px solid rgba(255,215,0,0.3);
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            white-space: nowrap;
         }
 
         .board-container {
             flex: 1;
+            min-height: 0;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            gap: clamp(4px, 1.5vh, 14px);
             width: 100%;
             max-width: 900px;
-            padding: 20px;
+            padding: clamp(6px, 2.5vw, 20px);
             box-sizing: border-box;
         }
 
@@ -76,13 +116,18 @@
         .hand {
             display: flex;
             justify-content: center;
-            gap: -20px;
-            min-height: 174px; /* Matched to card height */
+            align-items: flex-end;
+            flex-wrap: nowrap;
         }
-        
+
+        /* Every .card gets its width from --card-w, which defaults to the
+           table/deck size and is overridden per-context below. Height is
+           derived from width via aspect-ratio so cards never distort. */
         .card {
-            width: 96px;
-            height: 174px;
+            --card-w: var(--table-card-w);
+            width: var(--card-w);
+            aspect-ratio: 96 / 174;
+            height: auto;
             background: transparent; 
             border-radius: 8px;
             position: relative;
@@ -90,8 +135,20 @@
             box-shadow: -2px 5px 15px rgba(0,0,0,0.4);
             transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s;
             user-select: none;
-            margin: 0 5px;
+            margin: 0 clamp(2px, 1vw, 5px);
             overflow: hidden; 
+        }
+
+        /* The player's hand is what people actually need to tap, so it
+           always gets the biggest cards on screen. */
+        #player-hand .card {
+            --card-w: var(--player-card-w);
+        }
+
+        /* The AI's hand is just face-down backs for reference, so it can
+           stay smaller and free up room for the player's cards. */
+        #ai-hand .card {
+            --card-w: var(--ai-card-w);
         }
 
         .card:hover {
@@ -130,9 +187,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            font-size: 16px;
+            font-size: clamp(9px, calc(var(--card-w) * 0.155), 16px);
             font-weight: bold;
-            padding: 6px;
+            padding: clamp(2px, calc(var(--card-w) * 0.06), 6px);
             line-height: 1.1;
         }
         
@@ -144,7 +201,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 42px;
+            font-size: clamp(18px, calc(var(--card-w) * 0.42), 42px);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -153,7 +210,7 @@
         }
 
         .emoji-style .center .main-rank {
-            font-size: 18px;
+            font-size: clamp(9px, calc(var(--card-w) * 0.175), 18px);
             font-weight: bold;
             margin-top: -5px;
             text-shadow: none;
@@ -183,30 +240,34 @@
         /* Middle Play Area */
         .middle-area {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            height: 250px;
+            gap: clamp(6px, 3vw, 24px);
+            height: auto;
             width: 100%; 
         }
         
         .middle-area > div {
-            flex: 1; 
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: 33.33%;
         }
         .deck-area {
             position: relative;
-            width: 190px;
-            height: 180px;
+            width: clamp(96px, 32vw, 190px);
+            aspect-ratio: 190 / 180;
+            height: auto;
+        }
+
+        #briscola-card, #deck-stack {
+            --card-w: var(--table-card-w);
         }
 
         #briscola-card {
             position: absolute;
-            left: 50px;
-            top: 30px;
+            left: 26%;
+            top: 16%;
             transform: rotate(90deg);
             z-index: 0;
             box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
@@ -244,8 +305,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 320px;
-            height: 230px;
+            width: clamp(150px, 54vw, 320px);
+            aspect-ratio: 320 / 230;
+            height: auto;
             border-radius: 100px;
             background: rgba(0,0,0,0.15);
             border: 2px dashed rgba(255, 215, 0, 0.2);
@@ -259,15 +321,71 @@
         .table-area .card:hover { transform: none !important; cursor: default; }
 
         .status-board {
-            font-size: 1.2em;
-            margin-top: 10px;
-            padding: 10px 30px;
+            font-size: clamp(0.75em, 2.8vw, 1.2em);
+            margin-top: clamp(4px, 1.5vh, 10px);
+            padding: clamp(6px, 1.5vh, 10px) clamp(14px, 4vw, 30px);
             background: rgba(0,0,0,0.7);
             border-radius: 30px;
             display: inline-block;
             text-transform: uppercase;
             letter-spacing: 2px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* Session Stats Bar */
+        .stats-bar {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            padding: clamp(5px, 1vh, 8px) 6px;
+            font-size: clamp(11px, 2.8vw, 14px);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: clamp(6px, 2vw, 20px);
+            row-gap: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats-bar span {
+            font-weight: 500;
+        }
+
+        .clear-btn {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-left: 15px;
+        }
+
+        .clear-btn:hover {
+            background: rgba(231, 76, 60, 0.5);
+        }
+
+        /* Short viewports (phones in landscape) have very little vertical
+           room. Compress the chrome (HUD/stats/status) and shrink cards
+           further so the player's hand is never pushed off-screen. */
+        @media (orientation: landscape) and (max-height: 500px) {
+            :root {
+                --player-card-w: clamp(56px, 19vh, 90px);
+                --ai-card-w: clamp(28px, 9vh, 52px);
+                --table-card-w: clamp(30px, 10vh, 60px);
+            }
+            .hud { padding: 4px 6px; gap: 6px; }
+            .hud-controls { gap: 6px; }
+            .control-group label { display: none; }
+            .score-badge { padding: 4px 10px; font-size: 12px; }
+            select, button { padding: 4px 8px; font-size: 11px; }
+            .stats-bar { padding: 3px 4px; font-size: 10px; gap: 8px; }
+            .status-board { padding: 3px 12px; margin-top: 2px; font-size: 0.65em; }
+            .board-container { gap: 4px; padding: 4px 8px; }
+            .middle-area { gap: 6px; }
+            /* Drive these off height instead of width: landscape phones
+               have width to spare but almost no vertical room, so let
+               aspect-ratio compute width from a height budget instead. */
+            .deck-area { width: auto; height: clamp(56px, 20vh, 180px); }
+            .table-area { width: auto; height: clamp(56px, 20vh, 230px); }
         }
     </style>
 </head>
@@ -276,23 +394,37 @@
 <div class="hud">
     <div class="score-badge">AI: <span id="ai-score">0</span></div>
     
-    <div>
-        <label for="card-style-select" style="margin-right: 5px;">Style:</label>
-        <select id="card-style-select" onchange="changeCardStyle()">
-            <option value="images">Images</option>
-            <option value="emojis">Emojis</option>
-        </select>
-        
-        <label for="difficulty-select" style="margin-left: 15px; margin-right: 5px;">AI Level:</label>
-        <select id="difficulty-select" onchange="changeDifficulty()">
-            <option value="easy">Easy (Random)</option>
-            <option value="medium">Medium (Heuristic)</option>
-            <option value="hard">Hard (Strategic)</option>
-        </select>
-        <button onclick="resetGame()" style="margin-left: 15px;">Deal New Game</button>
+    <div class="hud-controls">
+        <div class="control-group">
+            <label for="card-style-select">Style:</label>
+            <select id="card-style-select" onchange="changeCardStyle()">
+                <option value="images">Images</option>
+                <option value="emojis">Emojis</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="difficulty-select">AI Level:</label>
+            <select id="difficulty-select" onchange="changeDifficulty()">
+                <option value="easy">Easy (Random)</option>
+                <option value="medium">Medium (Heuristic)</option>
+                <option value="hard">Hard (Strategic)</option>
+            </select>
+        </div>
+
+        <button onclick="resetGame()">Deal New Game</button>
     </div>
 
     <div class="score-badge" style="color: #ffd700;">YOU: <span id="player-score">0</span></div>
+</div>
+
+<div class="stats-bar">
+    <span>Games: <b id="stat-games">0</b></span>
+    <span style="color: #4cd137;">Wins: <b id="stat-wins">0</b></span>
+    <span style="color: #e84118;">Losses: <b id="stat-losses">0</b></span>
+    <span style="color: #fbc531;">Ties: <b id="stat-ties">0</b></span>
+    <span>Win Rate: <b id="stat-rate">0%</b></span>
+    <button onclick="clearStats()" class="clear-btn">Reset Stats</button>
 </div>
 
 <div class="board-container">
@@ -312,11 +444,8 @@
 
     <div>
         <div class="table-area" id="table"></div>
-        <div class="status-board" id="status" style="max-width: 280px; white-space: normal; text-align: center;">Starting game...</div>
+        <div class="status-board" id="status" style="max-width: min(280px, 80vw); white-space: normal; text-align: center;">Starting game...</div>
     </div>
-
-    <div>
-        </div>
 
 </div>
 
@@ -418,13 +547,18 @@
 
         const tableDiv = document.getElementById('table');
         const tableRect = tableDiv.getBoundingClientRect();
+        // Read the clone's actual on-screen size (cards scale responsively)
+        // instead of assuming the old fixed 96x174 desktop dimensions.
+        const cloneRect = clone.getBoundingClientRect();
+        const halfW = cloneRect.width / 2;
+        const halfH = cloneRect.height / 2;
 
         let offsetX = isPlayer ? -15 : 15;
         let shift = isFirstCard ? -25 : 25;
         let yOffset = isPlayer ? 10 : -10;
 
-        let targetLeft = tableRect.left + (tableRect.width / 2) - 48 + shift + offsetX; 
-        let targetTop = tableRect.top + (tableRect.height / 2) - 87 + yOffset; 
+        let targetLeft = tableRect.left + (tableRect.width / 2) - halfW + shift + offsetX; 
+        let targetTop = tableRect.top + (tableRect.height / 2) - halfH + yOffset; 
 
         clone.offsetHeight;
 
@@ -633,10 +767,28 @@
 
     function endGame() {
         gameOver = true;
-        let msg = playerScore > aiScore ? "YOU WIN!" : (playerScore < aiScore ? "AI WINS!" : "IT'S A TIE!");
-        let color = playerScore > aiScore ? "#4cd137" : (playerScore < aiScore ? "#e84118" : "#fbc531");
-        updateStatus(`GAME OVER! ${msg}`, color);
-    }
+            stats.games++;
+    
+            let msg = "";
+            let color = "";
+
+            if (playerScore > aiScore) {
+                msg = "YOU WIN!";
+                color = "#4cd137";
+                stats.wins++;
+            } else if (playerScore < aiScore) {
+                msg = "AI WINS!";
+                color = "#e84118";
+                stats.losses++;
+            } else {
+                msg = "IT'S A TIE!";
+                color = "#fbc531";
+                stats.ties++;
+            }
+    
+            saveStats(); // Save and update the UI
+            updateStatus(`GAME OVER! ${msg}`, color);
+            }
 
     // --- RENDER ENGINE ---
     function getCardImagePath(card) {
@@ -739,6 +891,37 @@
         document.getElementById('ai-score').innerText = aiScore;
     }
 
+    // --- SESSION STATS LOGIC ---
+        let stats = { wins: 0, losses: 0, ties: 0, games: 0 };
+
+        function initStats() {
+            const savedStats = localStorage.getItem('briscolaStats');
+            if (savedStats) {
+                stats = JSON.parse(savedStats);
+            }
+            updateStatsUI();
+        }
+
+        function saveStats() {
+            localStorage.setItem('briscolaStats', JSON.stringify(stats));
+            updateStatsUI();
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stat-games').innerText = stats.games;
+            document.getElementById('stat-wins').innerText = stats.wins;
+            document.getElementById('stat-losses').innerText = stats.losses;
+            document.getElementById('stat-ties').innerText = stats.ties;
+    
+            let winRate = stats.games > 0 ? Math.round((stats.wins / stats.games) * 100) : 0;
+            document.getElementById('stat-rate').innerText = winRate + '%';
+    }
+
+        function clearStats() {
+            stats = { wins: 0, losses: 0, ties: 0, games: 0 };
+            saveStats();
+        }
+    initStats();
     initGame();
 </script>
 </body>
