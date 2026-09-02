@@ -242,7 +242,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: clamp(6px, 3vw, 24px);
             height: auto;
             width: 100%; 
         }
@@ -258,6 +257,21 @@
             width: clamp(96px, 32vw, 190px);
             aspect-ratio: 190 / 180;
             height: auto;
+            /* Spacing to the table lives here (not on .middle-area's gap)
+               so it can collapse to 0 together with the width once the
+               deck is empty, fully reclaiming the space for the table. */
+            margin-right: clamp(6px, 3vw, 24px);
+            transition: width 0.6s ease, margin-right 0.6s ease, opacity 0.5s ease;
+        }
+
+        /* Once the deck (and trump card) are fully drawn, the deck area
+           has nothing left to show for the rest of the hand — collapse it
+           so the table area can grow into the freed space. */
+        .middle-area.deck-exhausted .deck-area {
+            width: 0;
+            margin-right: 0;
+            opacity: 0;
+            pointer-events: none;
         }
 
         #briscola-card, #deck-stack {
@@ -312,6 +326,12 @@
             background: rgba(0,0,0,0.15);
             border: 2px dashed rgba(255, 215, 0, 0.2);
             position: relative;
+            transition: width 0.6s ease;
+        }
+
+        /* Grow the table into the space the deck area just vacated. */
+        .middle-area.deck-exhausted .table-area {
+            width: clamp(200px, 74vw, 480px);
         }
         
         .table-area .card {
@@ -380,12 +400,25 @@
             .stats-bar { padding: 3px 4px; font-size: 10px; gap: 8px; }
             .status-board { padding: 3px 12px; margin-top: 2px; font-size: 0.65em; }
             .board-container { gap: 4px; padding: 4px 8px; }
-            .middle-area { gap: 6px; }
             /* Drive these off height instead of width: landscape phones
                have width to spare but almost no vertical room, so let
                aspect-ratio compute width from a height budget instead. */
-            .deck-area { width: auto; height: clamp(56px, 20vh, 180px); }
+            .deck-area { width: auto; height: clamp(56px, 20vh, 180px); margin-right: 6px; }
             .table-area { width: auto; height: clamp(56px, 20vh, 230px); }
+
+            /* Collapsing horizontally doesn't free vertical room here, but
+               keep the deck area fully gone and give the table a modest
+               height bump so growth still reads as intentional. */
+            .middle-area.deck-exhausted .deck-area {
+                width: 0;
+                height: 0;
+                margin-right: 0;
+                opacity: 0;
+            }
+            .middle-area.deck-exhausted .table-area {
+                width: auto;
+                height: clamp(56px, 23vh, 260px);
+            }
         }
     </style>
 </head>
@@ -886,6 +919,14 @@
             deckStackDiv.style.display = 'none';
             deckBadge.style.display = 'none';
         }
+
+        // Once both the draw pile AND the trump card have been taken,
+        // nothing is left to draw for the rest of the hand (the last 3
+        // tricks are played straight from each player's remaining cards).
+        // Collapse the now-empty deck area and let the table grow into
+        // the space it freed up.
+        const middleAreaDiv = document.querySelector('.middle-area');
+        middleAreaDiv.classList.toggle('deck-exhausted', deck.length === 0 && !briscolaCard);
 
         document.getElementById('player-score').innerText = playerScore;
         document.getElementById('ai-score').innerText = aiScore;
