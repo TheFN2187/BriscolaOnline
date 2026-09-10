@@ -420,6 +420,55 @@
                 height: clamp(56px, 23vh, 260px);
             }
         }
+
+        /* Large desktop & laptop monitors. Card sizing tops out at the
+           original 96px width above (matching the pre-mobile-optimization
+           desktop design), which already saturates on any normal laptop
+           screen and never grows further no matter how big the monitor
+           gets. These min-width tiers let cards — and the table/deck area
+           they sit in, and the overall board — keep scaling up on genuinely
+           large screens. Purely additive: the thresholds start well above
+           any phone or tablet width, so nothing below 1600px changes. */
+        @media (min-width: 1600px) {
+            :root {
+                --player-card-w: clamp(76px, min(24vw, 30vh), 128px);
+                --ai-card-w: clamp(46px, min(13vw, 17vh), 128px);
+                --table-card-w: clamp(52px, min(15vw, 19vh), 128px);
+            }
+            .board-container { max-width: 1150px; }
+            .deck-area { width: clamp(96px, 32vw, 240px); margin-right: clamp(6px, 3vw, 32px); }
+            .table-area { width: clamp(150px, 54vw, 420px); }
+            .middle-area.deck-exhausted .table-area { width: clamp(200px, 74vw, 560px); }
+            .deck-counter-badge { font-size: 16px; padding: 7px 10px; }
+        }
+
+        /* ~2560px-class displays (WQHD monitors, etc). */
+        @media (min-width: 2560px) {
+            :root {
+                --player-card-w: clamp(76px, min(24vw, 30vh), 156px);
+                --ai-card-w: clamp(46px, min(13vw, 17vh), 156px);
+                --table-card-w: clamp(52px, min(15vw, 19vh), 156px);
+            }
+            .board-container { max-width: 1400px; }
+            .deck-area { width: clamp(96px, 32vw, 290px); margin-right: clamp(6px, 3vw, 38px); }
+            .table-area { width: clamp(150px, 54vw, 500px); }
+            .middle-area.deck-exhausted .table-area { width: clamp(200px, 74vw, 660px); }
+            .deck-counter-badge { font-size: 19px; padding: 8px 12px; }
+        }
+
+        /* 4K / UHD (3840x2160) and beyond. */
+        @media (min-width: 3400px) {
+            :root {
+                --player-card-w: clamp(76px, min(24vw, 30vh), 190px);
+                --ai-card-w: clamp(46px, min(13vw, 17vh), 190px);
+                --table-card-w: clamp(52px, min(15vw, 19vh), 190px);
+            }
+            .board-container { max-width: 1700px; }
+            .deck-area { width: clamp(96px, 32vw, 350px); margin-right: clamp(6px, 3vw, 46px); }
+            .table-area { width: clamp(150px, 54vw, 600px); }
+            .middle-area.deck-exhausted .table-area { width: clamp(200px, 74vw, 800px); }
+            .deck-counter-badge { font-size: 23px; padding: 10px 14px; }
+        }
     </style>
 </head>
 <body>
@@ -508,6 +557,7 @@
     let gameOver = false;
     let aiDifficulty = 'easy';
     let useEmojiCards = false;
+    let gameId = 0; // bumped every new deal; lets in-flight timeouts detect a reset and bail out
 
     function changeDifficulty() { aiDifficulty = document.getElementById('difficulty-select').value; }
     
@@ -524,6 +574,7 @@
     }
 
     function initGame() {
+        gameId++; // invalidates any timeout/animation callbacks still in flight from a previous game
         deck = [];
         suits.forEach(suit => {
             ranks.forEach(rank => {
@@ -633,9 +684,11 @@
         let card = isPlayer ? playerHand[index] : aiHand[index];
         let isFirstCard = table.length === 0;
         let randomRotation = Math.floor(Math.random() * 40) - 20; 
+        const thisGame = gameId; // snapshot so a "Deal New Game" click mid-animation can't corrupt the next game
         
         animateCardPlay(index, isPlayer, card, isFirstCard, randomRotation, () => {
-            
+            if (thisGame !== gameId) return; // a new game started while this card was flying to the table; drop it
+
             if (isPlayer) {
                 playerHand.splice(index, 1);
             } else {
@@ -646,11 +699,11 @@
             render();
 
             if (table.length === 2) {
-                setTimeout(resolveTrick, 1200); 
+                setTimeout(() => resolveTrick(thisGame), 1200); 
             } else {
                 if (isPlayer) {
                     updateStatus("AI is thinking...", "#fbc531");
-                    setTimeout(aiPlayCalculations, 800); 
+                    setTimeout(() => aiPlayCalculations(thisGame), 800); 
                 } else {
                     playerCanPlay = true; 
                     updateStatus("Your turn to follow.", "#4cd137");
@@ -659,7 +712,10 @@
         });
     }
 
-    function resolveTrick() {
+    function resolveTrick(gid) {
+        if (gid !== gameId) return; // stale call from a game that's since been reset
+        if (table.length < 2) return; // safety net: nothing valid on the table to resolve
+
         let lead = table[0];
         let follow = table[1];
         
@@ -668,7 +724,8 @@
         let points = lead.card.val + follow.card.val;
         
         animateTrickClear(trickWinnerIsPlayer, () => {
-            
+            if (gid !== gameId) return; // a reset happened during the clear-table animation
+
             if (trickWinnerIsPlayer) {
                 playerScore += points;
                 playerTurn = true;
@@ -687,7 +744,7 @@
             } else {
                 if (!playerTurn) {
                     updateStatus("AI took the trick. Thinking...", "#e84118");
-                    setTimeout(aiPlayCalculations, 1000); 
+                    setTimeout(() => aiPlayCalculations(gid), 1000); 
                 } else {
                     updateStatus("You took the trick! Your lead.", "#4cd137");
                 }
@@ -696,8 +753,8 @@
     }
 
     // --- AI Engines ---
-    function aiPlayCalculations() {
-        if (gameOver) return;
+    function aiPlayCalculations(gid) {
+        if (gid !== gameId || gameOver) return; // stale call from a game that's since been reset
         let chosenIndex = 0;
         
         if (aiDifficulty === 'easy') chosenIndex = Math.floor(Math.random() * aiHand.length);
@@ -734,7 +791,7 @@
                 winningCards.sort((a, b) => a.card.power - b.card.power);
                 return winningCards[0].index;
             }
-            aiHand.forEach((card, index) => losingCards.push({card, index}));
+            if (losingCards.length === 0) losingCards = winningCards; // every card would win; just play the cheapest one
             losingCards.sort((a,b) => (a.card.val + (a.card.suit === briscolaSuit ? 20 : 0)) - (b.card.val + (b.card.suit === briscolaSuit ? 20 : 0)));
             return losingCards[0].index;
         }
