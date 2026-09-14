@@ -19,6 +19,13 @@
 
         * { box-sizing: border-box; }
 
+        /* Root scroller: pin to the viewport so nothing above body can
+           introduce a scrollbar either. */
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
         /* The Table */
         body {
             background: radial-gradient(circle at center, #2E7D32 0%, #1B5E20 60%, #0A3D11 100%);
@@ -28,17 +35,32 @@
             text-align: center;
             margin: 0;
             padding: 0;
-            min-height: 100vh;
-            min-height: 100dvh;
+            height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* Safety net only: layout is sized to fit one screen, but if a
-               device is unusually short we scroll instead of silently
-               clipping game content (the original clipped the player's
-               own hand off-screen with no way to reach it). */
-            overflow-x: hidden;
-            overflow-y: auto;
+            /* The board is fully sized via vh-based clamps (see the card
+               width tokens above and the short-viewport media query below)
+               to fit within one screen at any size or orientation, so the
+               page never needs to scroll — keeps it feeling like a native
+               app rather than a webpage. */
+            overflow: hidden;
+        }
+
+        /* Hosts the HUD, stats bar, and board. Normally laid out at
+           scale(1) exactly as before; on the rare viewport too short for
+           even the minimum card sizes, fitToViewport() (JS) applies a
+           uniform scale-down here so everything shrinks together and
+           stays fully visible instead of being clipped or scrollable. */
+        #viewport-fit {
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform-origin: top center;
         }
 
         /* HUD & Controls */
@@ -69,6 +91,7 @@
         }
         
         select, button {
+            font-family: inherit;
             background: rgba(255, 255, 255, 0.1);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -110,6 +133,7 @@
             max-width: 900px;
             padding: clamp(6px, 2.5vw, 20px);
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         /* Card Styling */
@@ -352,31 +376,94 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
-        /* Session Stats Bar */
-        .stats-bar {
+        /* Session Stats Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            padding: clamp(5px, 1vh, 8px) 6px;
-            font-size: clamp(11px, 2.8vw, 14px);
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(3px);
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
             align-items: center;
-            gap: clamp(6px, 2vw, 20px);
-            row-gap: 4px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 1000;
         }
 
-        .stats-bar span {
-            font-weight: 500;
+        .modal-overlay.collapsed {
+            display: none;
+        }
+
+        .modal-panel {
+            background: #123F17;
+            border: 1px solid rgba(255, 215, 0, 0.35);
+            border-radius: 18px;
+            padding: clamp(18px, 4vw, 28px);
+            width: 100%;
+            max-width: min(340px, 92vw);
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: clamp(12px, 3vh, 18px);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: clamp(16px, 4vw, 20px);
+            letter-spacing: 1px;
+        }
+
+        .modal-close-btn {
+            padding: 4px 11px !important;
+            font-size: 16px !important;
+            line-height: 1;
+            border-radius: 50% !important;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 12px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+
+        .stat-item .stat-label {
+            display: block;
+            font-size: clamp(10px, 2.6vw, 12px);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+
+        .stat-item .stat-value {
+            display: block;
+            font-size: clamp(18px, 5vw, 24px);
+            font-weight: bold;
         }
 
         .clear-btn {
             background: rgba(231, 76, 60, 0.2);
             border: 1px solid rgba(231, 76, 60, 0.5);
-            padding: 4px 10px;
-            font-size: 12px;
-            margin-left: 15px;
+            padding: 8px 10px;
+            font-size: 13px;
+            width: 100%;
         }
 
         .clear-btn:hover {
@@ -397,7 +484,6 @@
             .control-group label { display: none; }
             .score-badge { padding: 4px 10px; font-size: 12px; }
             select, button { padding: 4px 8px; font-size: 11px; }
-            .stats-bar { padding: 3px 4px; font-size: 10px; gap: 8px; }
             .status-board { padding: 3px 12px; margin-top: 2px; font-size: 0.65em; }
             .board-container { gap: 4px; padding: 4px 8px; }
             /* Drive these off height instead of width: landscape phones
@@ -473,6 +559,8 @@
 </head>
 <body>
 
+<div id="viewport-fit">
+
 <div class="hud">
     <div class="score-badge">AI: <span id="ai-score">0</span></div>
     
@@ -495,18 +583,10 @@
         </div>
 
         <button onclick="resetGame()">Deal New Game</button>
+        <button onclick="openStatsModal()">📊 Stats</button>
     </div>
 
     <div class="score-badge" style="color: #ffd700;">YOU: <span id="player-score">0</span></div>
-</div>
-
-<div class="stats-bar">
-    <span>Games: <b id="stat-games">0</b></span>
-    <span style="color: #4cd137;">Wins: <b id="stat-wins">0</b></span>
-    <span style="color: #e84118;">Losses: <b id="stat-losses">0</b></span>
-    <span style="color: #fbc531;">Ties: <b id="stat-ties">0</b></span>
-    <span>Win Rate: <b id="stat-rate">0%</b></span>
-    <button onclick="clearStats()" class="clear-btn">Reset Stats</button>
 </div>
 
 <div class="board-container">
@@ -534,6 +614,48 @@
     <div class="hand" id="player-hand"></div>
 </div>
 
+</div>
+
+<div class="modal-overlay collapsed" id="stats-modal-overlay" onclick="handleOverlayClick(event)">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h2>Session Stats</h2>
+            <button class="modal-close-btn" onclick="closeStatsModal()">✕</button>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="stat-label">Games</span>
+                <span class="stat-value" id="stat-games">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Win Rate</span>
+                <span class="stat-value" id="stat-rate">0%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Wins</span>
+                <span class="stat-value" id="stat-wins" style="color: #4cd137;">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Losses</span>
+                <span class="stat-value" id="stat-losses" style="color: #e84118;">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Ties</span>
+                <span class="stat-value" id="stat-ties" style="color: #fbc531;">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">High Score</span>
+                <span class="stat-value" id="stat-high" style="color: #ffd700;">0</span>
+            </div>
+            <div class="stat-item" style="grid-column: 1 / -1;">
+                <span class="stat-label">Average Score</span>
+                <span class="stat-value" id="stat-avg">0</span>
+            </div>
+        </div>
+        <button onclick="clearStats()" class="clear-btn">Reset Stats</button>
+    </div>
+</div>
+
 <script>
     const suits = ['Coins', 'Cups', 'Swords', 'Clubs'];
     const ranks = [
@@ -559,7 +681,21 @@
     let useEmojiCards = false;
     let gameId = 0; // bumped every new deal; lets in-flight timeouts detect a reset and bail out
 
-    function changeDifficulty() { aiDifficulty = document.getElementById('difficulty-select').value; }
+    function changeDifficulty() {
+        aiDifficulty = document.getElementById('difficulty-select').value;
+        localStorage.setItem('briscolaDifficulty', aiDifficulty);
+    }
+
+    // Restores the last-played difficulty (if any) before the first game
+    // is dealt, so the dropdown and aiDifficulty reflect last session
+    // instead of always defaulting to "easy".
+    function initDifficulty() {
+        const savedDifficulty = localStorage.getItem('briscolaDifficulty');
+        if (savedDifficulty) {
+            aiDifficulty = savedDifficulty;
+            document.getElementById('difficulty-select').value = savedDifficulty;
+        }
+    }
     
     function changeCardStyle() { 
         useEmojiCards = document.getElementById('card-style-select').value === 'emojis';
@@ -858,6 +994,10 @@
     function endGame() {
         gameOver = true;
             stats.games++;
+            stats.totalScore = (stats.totalScore || 0) + playerScore;
+            if (playerScore > (stats.highScore || 0)) {
+                stats.highScore = playerScore;
+            }
     
             let msg = "";
             let color = "";
@@ -879,6 +1019,33 @@
             saveStats(); // Save and update the UI
             updateStatus(`GAME OVER! ${msg}`, color);
             }
+
+    // --- VIEWPORT FIT (no-scroll guarantee) ---
+    // The vh-based clamp sizing above fits comfortably on virtually every
+    // real device, but a handful of unusually short/narrow viewports (e.g.
+    // small phones with the stats panel open) can still need a hair more
+    // room than is available. Rather than let that clip the player's own
+    // hand off-screen (or fall back to a scrollbar), measure the board's
+    // true natural height and, only if it doesn't fit, scale the whole
+    // thing down uniformly so everything stays fully visible.
+    function fitToViewport() {
+        const wrapper = document.getElementById('viewport-fit');
+        const playerHandEl = document.getElementById('player-hand');
+        if (!wrapper || !playerHandEl) return;
+
+        wrapper.style.transform = 'none'; // measure at natural (unscaled) size
+        const naturalBottom = playerHandEl.getBoundingClientRect().bottom;
+        const available = window.innerHeight;
+
+        if (naturalBottom > available && naturalBottom > 0) {
+            const scale = Math.min(1, (available / naturalBottom) * 0.99);
+            wrapper.style.transform = `scale(${scale})`;
+        }
+    }
+
+    window.addEventListener('resize', fitToViewport);
+    window.addEventListener('orientationchange', fitToViewport);
+    window.addEventListener('load', fitToViewport);
 
     // --- RENDER ENGINE ---
     function getCardImagePath(card) {
@@ -987,15 +1154,20 @@
 
         document.getElementById('player-score').innerText = playerScore;
         document.getElementById('ai-score').innerText = aiScore;
+
+        fitToViewport();
     }
 
     // --- SESSION STATS LOGIC ---
-        let stats = { wins: 0, losses: 0, ties: 0, games: 0 };
+        const defaultStats = { wins: 0, losses: 0, ties: 0, games: 0, highScore: 0, totalScore: 0 };
+        let stats = { ...defaultStats };
 
         function initStats() {
             const savedStats = localStorage.getItem('briscolaStats');
             if (savedStats) {
-                stats = JSON.parse(savedStats);
+                // Merge with defaults so older saved stats (from before high
+                // score/average tracking existed) still work correctly.
+                stats = { ...defaultStats, ...JSON.parse(savedStats) };
             }
             updateStatsUI();
         }
@@ -1010,16 +1182,40 @@
             document.getElementById('stat-wins').innerText = stats.wins;
             document.getElementById('stat-losses').innerText = stats.losses;
             document.getElementById('stat-ties').innerText = stats.ties;
+            document.getElementById('stat-high').innerText = stats.highScore;
     
             let winRate = stats.games > 0 ? Math.round((stats.wins / stats.games) * 100) : 0;
             document.getElementById('stat-rate').innerText = winRate + '%';
+
+            let avgScore = stats.games > 0 ? Math.round(stats.totalScore / stats.games) : 0;
+            document.getElementById('stat-avg').innerText = avgScore;
     }
 
         function clearStats() {
-            stats = { wins: 0, losses: 0, ties: 0, games: 0 };
+            stats = { ...defaultStats };
             saveStats();
         }
+
+        // --- STATS MODAL ---
+        function openStatsModal() {
+            document.getElementById('stats-modal-overlay').classList.remove('collapsed');
+        }
+
+        function closeStatsModal() {
+            document.getElementById('stats-modal-overlay').classList.add('collapsed');
+        }
+
+        // Clicking the dimmed backdrop (but not the panel itself) closes the modal.
+        function handleOverlayClick(event) {
+            if (event.target.id === 'stats-modal-overlay') closeStatsModal();
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeStatsModal();
+        });
+
     initStats();
+    initDifficulty();
     initGame();
 </script>
 </body>
