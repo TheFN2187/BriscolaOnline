@@ -6,12 +6,17 @@ It features an intelligent rule-based AI with three difficulty levels, smooth CS
 
 ## Features
 * **Full Briscola Rule Engine:** Accurately handles trick resolution, trump (briscola) prioritization, point values, and scoring.
-* **Three AI Difficulties:**
+* **Three AI Difficulties** (your last-selected difficulty is remembered automatically and restored the next time you open the game):
   * *Easy:* Plays completely at random.
   * *Medium:* A heuristic AI that avoids throwing away high-value cards and uses trumps defensively.
   * *Hard:* A strategic AI that bleeds the player's hand, protects high-power trumps, and actively tries to steal the player's high-value cards (Aces and 3s).
-* **Polished UI/UX:** Features a gradient baize table, responsive layout, and smooth CSS keyframe animations to simulate the physical feeling of tossing cards onto a table and sweeping up won tricks.
-* **Win/Loss Statistic Tracking:** Tracks number of games played, games won, games lost, and calculates the Win/Loss ratio.
+* **Two Card Styles:** Instantly switch between the illustrated Triestine card images and a lightweight emoji/text-based style.
+* **Polished UI/UX:** Features a gradient baize table and smooth CSS keyframe animations to simulate the physical feeling of tossing cards onto a table and sweeping up won tricks. The layout is fully responsive and guaranteed to fit within a single screen at any size or orientation — no scrollbars, ever.
+* **Session Stats Popup:** A "📊 Stats" button opens a centered stats panel (closable via its ✕ button, clicking outside the panel, or the Escape key), keeping the board uncluttered during play. Tracks:
+  * Games played, wins, losses, ties, and win rate
+  * **High Score** — your best single-game point total
+  * **Average Score** — your average points per game
+  * All stats are saved in the browser and persist across visits.
 
 ## Setup & Installation
 To play Briscola immediately via a web browser, click [here](https://thefn2187.github.io/BriscolaOnline/). The project is hosted on Github Pages.
