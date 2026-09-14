@@ -26,13 +26,13 @@ Because this game relies entirely on client-side rendering, you do not need a se
 1. Clone or download this repository to your local machine.
 2. Ensure your directory structure looks like this:
    ```text
-   /BriscolaGame
+   /BriscolaOnline
    ├── index.html
    └── /images
-       ├── coins_ace.png
-       ├── coins_2.png
-       ├── ... (40 face cards)
-3. Double-click briscola.html to open it in any modern web browser (Chrome, Firefox, Safari, Edge).
+       ├── clubs_2.png
+       ├── clubs_3.png
+       ├── ... (38 other cards)
+3. Double-click index.html to open it in any modern web browser (Chrome, Firefox, Safari, Edge).
 
 ## How to Play
 1. **Objective:** A standard Briscola deck has 120 points. The goal is to collect 61 or more points to win.
