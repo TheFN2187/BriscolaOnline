@@ -122,6 +122,18 @@
             white-space: nowrap;
         }
 
+        /* On mobile, the AI score badge (first in source order) would
+           otherwise land alone on its own wrapped line at the very top of
+           the HUD, costing the board a whole row of vertical space just to
+           show one small badge. Reordering the flex children (without
+           touching the DOM) puts the controls first and pulls both score
+           badges into a shared order group right after them, so they wrap
+           onto the same line together, lower down, next to each other. */
+        @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+            .hud-controls { order: 1; }
+            .score-badge { order: 2; }
+        }
+
         .board-container {
             flex: 1;
             min-height: 0;
@@ -468,6 +480,24 @@
 
         .clear-btn:hover {
             background: rgba(231, 76, 60, 0.5);
+        }
+
+        /* Phones in portrait. The player's own cards are what they need to
+           see clearly and tap accurately, but --player-card-w's general
+           96px ceiling (sized for tablets/desktops too) was reached by
+           most phone widths well before the layout ran out of room,
+           leaving visible empty space above and on either side of the
+           hand. Raise that ceiling so the cards grow into that unused
+           space. This only changes card size — .board-container's normal
+           flex flow means the hand simply shrinks the gap above it as it
+           grows, it can never overlap the turn-status text above; and if
+           an unusually short/narrow device would ever run out of vertical
+           room, fitToViewport() (JS) uniformly scales the whole board down
+           to keep everything fully visible and non-overlapping. */
+        @media (max-width: 600px) {
+            :root {
+                --player-card-w: clamp(88px, 28vw, 128px);
+            }
         }
 
         /* Short viewports (phones in landscape) have very little vertical
